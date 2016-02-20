@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-double box_muller(double m, double s);
+double generateGaussianNoise(double m, double s);
 void writePointToFile(std::string filename, double x, double y);
 void generateSample(double mean, double std, int sampleNum, std::string filename);
 void generateSample(double mean1, double mean2, double std1, double std2, int sampleNum, std::string filename);
@@ -22,15 +22,15 @@ int main(int argc, char** argv){
   std::remove(filename3.c_str());
 
   // generate part1 class1 and class 2
-  generateSample(1.0, sqrt(1.0), 10000, filename1);
-  generateSample(4.0, sqrt(1.0), 10000, filename2);
+  generateSample(1.0, sqrt(2.0), 10000, filename1);
+  generateSample(6.0, sqrt(2.0), 10000, filename2);
 
   // generate part2 class 2
-  generateSample(4.0, 4.0, sqrt(4.0), sqrt(16.0), 10000, filename3);
+  generateSample(6.0, 6.0, sqrt(4.0), sqrt(8.0), 10000, filename3);
 
    // Example
-   std::remove("Example1");
-   std::remove("Example2");
+   std::remove("sample_data/Example1");
+   std::remove("sample_data/Example2");
    generateSample(3.0, 6.0, sqrt(0.5), sqrt(2.0), 10000, "sample_data/Example1");
    generateSample(3.0, -2.0, sqrt(2.0), sqrt(2.0), 10000, "sample_data/Example2");
 }
@@ -38,16 +38,16 @@ int main(int argc, char** argv){
 void generateSample(double mean, double std, int sampleNum, std::string filename){
   double xPos, yPos;
   for(int sample = 0; sample < sampleNum; sample++){
-    xPos = box_muller(mean,std);
-    yPos = box_muller(mean,std);
+    xPos = generateGaussianNoise(mean,std);
+    yPos = generateGaussianNoise(mean,std);
     writePointToFile(filename, xPos, yPos);
   }
 }
 void generateSample(double mean1, double mean2, double std1, double std2, int sampleNum, std::string filename){
   double xPos, yPos;
   for(int sample = 0; sample < sampleNum; sample++){
-    xPos = box_muller(mean1,std1);
-    yPos = box_muller(mean2,std2);
+    xPos = generateGaussianNoise(mean1,std1);
+    yPos = generateGaussianNoise(mean2,std2);
     writePointToFile(filename, xPos, yPos);
   }
 }
@@ -59,10 +59,10 @@ void writePointToFile(std::string filename, double xPos, double yPos){
   fout.close();
 }
 
-double box_muller(double m, double s)
- /* normal random variate generator */
+double generateGaussianNoise(double mean, double std)
+ /* Gaussian Random Number Generator. N(mean, std^2). It uses box-muller transformation to simulate the Gaussian distribution from uniformly distributed numbers.
+ */
 {
-  /* mean m, standard deviation s */
   double x1, x2, w, y1;
   static double y2;
   static bool use_last = false;
@@ -70,7 +70,7 @@ double box_muller(double m, double s)
   // setup time-based seed
   unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
   std::default_random_engine generator (seed);
-  std::uniform_real_distribution<double> distribution(0.0,1.0);
+  std::uniform_real_distribution<double> uni_real_dist(0.0,1.0);
 
   if (use_last){ /* use value from previous call */
     y1 = y2;
@@ -78,8 +78,8 @@ double box_muller(double m, double s)
   }
   else{
     do {
-      x1 = 2.0 * distribution(generator) - 1.0;
-      x2 = 2.0 * distribution(generator) - 1.0;
+      x1 = 2.0 * uni_real_dist(generator) - 1.0;
+      x2 = 2.0 * uni_real_dist(generator) - 1.0;
       w = x1 * x1 + x2 * x2;
     } while ( w >= 1.0 );
 
@@ -89,5 +89,5 @@ double box_muller(double m, double s)
     use_last = true;
   }
 
-  return( m + y1 * s );
+  return( mean + y1 * std );
 }
