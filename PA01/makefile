@@ -1,9 +1,9 @@
-CC  = g++
+CC  = g++ -std=c++11
 CFLAGS = -c -g -Wall
-SRCS = generator.cpp
+SRCS = Generator.cpp BayesianClassifier.cpp driver.cpp
 OBJS = ${SRCS:.cpp=.o}
 
-Generator: $(OBJS)
+TestDriver: $(OBJS)
 	$(CC) -o $@ $(OBJS)
 
 clean:
