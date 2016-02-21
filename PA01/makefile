@@ -7,7 +7,7 @@ TestDriver: $(OBJS)
 	$(CC) -o $@ $(OBJS)
 
 clean:
-	-rm -f Generator *.o
+	-rm -f TestDriver *.o
 
 .SUFFIXES: .cpp .c .o
 
