@@ -3,6 +3,36 @@
 BayesianClassifier::BayesianClassifier(){}
 BayesianClassifier::~BayesianClassifier(){}
 
+// Error bounds **********************************************************
+double BayesianClassifier::kb(double beta, std::vector<double> mean1, std::vector<double> mean2, Matrix cov1, Matrix cov2) const{
+
+    std::vector<double> diff(this->dim);
+    for(int ith = 0; ith < this->dim; ith++){
+      diff[ith] = mean1[ith] - mean2[ith];
+    }
+
+    Matrix covline = matrix_sum(scalar_mul(cov1, 1-beta), scalar_mul(cov2, beta));
+
+    double part1, part2;
+    part1 =  beta*(1-beta)/2.0*dot_vecs(dot_mat_vec(matrix_inv(covline),diff),diff);
+    part2 = 0.5*(log(matrix_det(covline)) - log(pow(matrix_det(cov1),1-beta)*pow(matrix_det(cov2),beta)));
+
+    double kb;
+    kb = part1 + part2;
+    return kb;
+}
+double BayesianClassifier::ekb(double beta) const{
+  return exp(-kb(beta, this->mean1, this->mean2, this->cov1, this->cov2));
+}
+
+double BayesianClassifier::chernoff(double beta) const{
+  return pow(this->prior1,beta)*pow(this->prior2,1-beta)*ekb(beta);
+}
+
+double BayesianClassifier::bhattacharyya() const{
+  return sqrt(this->prior1*this->prior2)*ekb(0.5);
+}
+
 // Linear discriminant *****************************************************
 LinearDiscriminant::LinearDiscriminant(std::vector<double> mean1, std::vector<double> mean2, double var, double prior1, double prior2){
   this->dim = mean1.size();
@@ -11,6 +41,16 @@ LinearDiscriminant::LinearDiscriminant(std::vector<double> mean1, std::vector<do
   this->var = var;
   this->prior1 = prior1;
   this->prior2 = prior2;
+  this->init();
+}
+
+void LinearDiscriminant::init(){
+  this->cov1 = Matrix(this->dim,std::vector<double>(this->dim));
+  this->cov2 = Matrix(this->dim,std::vector<double>(this->dim));
+  cov1[0] = {this->var,0};
+  cov1[1] = {0,this->var};
+  cov2[0] = {this->var,0};
+  cov2[1] = {0,this->var};
 }
 
 int LinearDiscriminant::predict(std::vector<double> x) const{
@@ -66,103 +106,39 @@ void QuadraticDiscriminant::init(){
   assert(this->mean1.size() == 2);
   assert(this->mean2.size() == 2);
   assert(this->cov1.size() == 2);
+  assert(this->cov1[0].size() == 2);
   assert(this->cov2.size() == 2);
-
-  double cov1_inv[2][2], cov2_inv[2][2];
-  double det1, det2;
-
-  // determinant
-  det1 = this->cov1[0][0]*this->cov1[1][1] - this->cov1[0][1]*this->cov1[1][0];
-  det2 = this->cov2[0][0]*this->cov2[1][1] - this->cov2[0][1]*this->cov2[1][0];
+  assert(this->cov2[0].size() == 2);
 
   // calc inverse
-  cov1_inv[0][0] = this->cov1[1][1]/det1;
-  cov1_inv[0][1] = this->cov1[0][1]/det1;
-  cov1_inv[1][0] = this->cov1[1][0]/det1;
-  cov1_inv[1][1] = this->cov1[0][0]/det1;
-
-  cov2_inv[0][0] = this->cov2[1][1]/det2;
-  cov2_inv[0][1] = this->cov2[0][1]/det2;
-  cov2_inv[1][0] = this->cov2[1][0]/det2;
-  cov2_inv[1][1] = this->cov2[0][0]/det2;
+  Matrix cov1_inv = matrix_inv(this->cov1);
+  Matrix cov2_inv = matrix_inv(this->cov2);
 
   // W
-  this->W1 = Matrix(2,std::vector<double>(2));
-  this->W2 = Matrix(2,std::vector<double>(2));
-
-  for(int row = 0; row < 2; row++){
-    for(int col = 0; col < 2; col++){
-      this->W1[row][col] = -0.5*cov1_inv[row][col];
-      this->W2[row][col] = -0.5*cov2_inv[row][col];
-    }
-  }
+  this->W1 = scalar_mul(cov1_inv,-0.5);
+  this->W2 = scalar_mul(cov2_inv,-0.5);
 
   // w
-  this->w1 = std::vector<double>(2,0.0);
-  this->w2 = std::vector<double>(2,0.0);
-  for(int row = 0; row < 2; row++){
-    for(int col = 0; col < 2; col++){
-      this->w1[row] += cov1_inv[row][col]*this->mean1[col];
-      this->w2[row] += cov2_inv[row][col]*this->mean2[col];
-    }
-  }
+  this->w1 = dot_mat_vec(cov1_inv,this->mean1);
+  this->w2 = dot_mat_vec(cov2_inv,this->mean2);
 
   // w0
   double part11 = 0.0, part12 = 0.0;
   double part21 = 0.0, part22 = 0.0;
 
-  std::vector<double> temp1(2,0.0), temp2(2,0.0);
+  part11 = -0.5*dot_vecs(this->w1,this->mean1);
+  part21 = -0.5*dot_vecs(this->w2,this->mean2);
 
-  for(int col = 0; col < 2; col++){
-    for(int row = 0; row < 2; row++){
-      temp1[col] += cov1_inv[row][col]*this->mean1[row];
-      temp2[col] += cov2_inv[row][col]*this->mean2[row];
-    }
-  }
-  for(int row = 0; row < 2; row++){
-      part11 += temp1[row]*this->mean1[row];
-      part21 += temp2[row]*this->mean2[row];
-  }
-  part11 *= -0.5;
-  part21 *= -0.5;
-
-  det1 = cov1_inv[0][0]*cov1_inv[1][1] - cov1_inv[0][1]*cov1_inv[1][0];
-  det2 = cov2_inv[0][0]*cov2_inv[1][1] - cov2_inv[0][1]*cov2_inv[1][0];
-
-  part12 = -0.5*log(det1)+log(this->prior1);
-  part22 = -0.5*log(det2)+log(this->prior2);
+  part12 = -0.5*log(matrix_det(cov1_inv))+log(this->prior1);
+  part22 = -0.5*log(matrix_det(cov2_inv))+log(this->prior2);
   this->w10 = part11 + part12;
   this->w20 = part21 + part22;
-
-  assert(this->w1.size() == 2);
-  assert(this->w2.size() == 2);
-  assert(this->W1.size() == 2);
-  assert(this->W2.size() == 2);
 }
 
 int QuadraticDiscriminant::predict(std::vector<double> x) const{
-  std::vector<double> temp1(2,0.0), temp2(2,0.0);
-  for(int col = 0; col < 2; col++){
-    for(int row = 0; row < 2; row++){
-      temp1[col] += this->W1[row][col]*x[row];
-      temp2[col] += this->W2[row][col]*x[row];
-    }
-  }
-  double dot11 = 0.0, dot21 = 0.0;
-  for(int row = 0; row < 2; row++){
-    dot11 += temp1[row]*x[row];
-    dot21 += temp2[row]*x[row];
-  }
-
-  double dot12 = 0.0, dot22 = 0.0;
-  for(int row = 0; row < 2; row++){
-    dot12 += this->w1[row]*x[row];
-    dot22 += this->w2[row]*x[row];
-  }
-
   double g1, g2;
-  g1 = dot11 + dot12 + this->w10;
-  g2 = dot21 + dot22 + this->w20;
+  g1 = dot_vecs(dot_mat_vec(this->W1,x),x) + dot_vecs(this->w1,x) + this->w10;
+  g2 = dot_vecs(dot_mat_vec(this->W2,x),x) + dot_vecs(this->w2,x) + this->w20;
 
   if(g1 > g2){
     return 0;
