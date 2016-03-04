@@ -1,41 +1,6 @@
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <random>
-#include <vector>
-#include <string>
-
-double generateGaussianNoise(double m, double s);
-void writePointToFile(std::string filename, double x, double y);
-void generateSample(double mean, double std, int sampleNum, std::string filename);
-void generateSample(double mean1, double mean2, double std1, double std2, int sampleNum, std::string filename);
-
-int main(int argc, char** argv){
-  // default setting
-  std::string filename1 = "sample_data/output1";
-  std::string filename2 = "sample_data/output2";
-  std::string filename3 = "sample_data/output3";
-
-  // remove file if exists
-  std::remove(filename1.c_str());
-  std::remove(filename2.c_str());
-  std::remove(filename3.c_str());
-
-  // generate part1 class1 and class 2
-  generateSample(1.0, sqrt(2.0), 10000, filename1);
-  generateSample(6.0, sqrt(2.0), 10000, filename2);
-
-  // generate part2 class 2
-  generateSample(6.0, 6.0, sqrt(4.0), sqrt(8.0), 10000, filename3);
-
-   // Example
-   std::remove("sample_data/Example1");
-   std::remove("sample_data/Example2");
-   generateSample(3.0, 6.0, sqrt(0.5), sqrt(2.0), 10000, "sample_data/Example1");
-   generateSample(3.0, -2.0, sqrt(2.0), sqrt(2.0), 10000, "sample_data/Example2");
-}
-
-void generateSample(double mean, double std, int sampleNum, std::string filename){
+#include "Generator.h"
+Generator::Generator(){}
+void Generator::generateSample(double mean, double std, int sampleNum, std::string filename){
   double xPos, yPos;
   for(int sample = 0; sample < sampleNum; sample++){
     xPos = generateGaussianNoise(mean,std);
@@ -43,7 +8,7 @@ void generateSample(double mean, double std, int sampleNum, std::string filename
     writePointToFile(filename, xPos, yPos);
   }
 }
-void generateSample(double mean1, double mean2, double std1, double std2, int sampleNum, std::string filename){
+void Generator::generateSample(double mean1, double mean2, double std1, double std2, int sampleNum, std::string filename){
   double xPos, yPos;
   for(int sample = 0; sample < sampleNum; sample++){
     xPos = generateGaussianNoise(mean1,std1);
@@ -52,15 +17,17 @@ void generateSample(double mean1, double mean2, double std1, double std2, int sa
   }
 }
 
-void writePointToFile(std::string filename, double xPos, double yPos){
+void Generator::writePointToFile(std::string filename, double xPos, double yPos){
   std::ofstream fout;
   fout.open(filename.c_str(), std::ofstream::app);
   fout << xPos << " " << yPos << std::endl;
   fout.close();
 }
 
-double generateGaussianNoise(double mean, double std)
- /* Gaussian Random Number Generator. N(mean, std^2). It uses box-muller transformation to simulate the Gaussian distribution from uniformly distributed numbers.
+double Generator::generateGaussianNoise(double mean, double std)
+ /* Gaussian Random Number Generator. N(mean, std^2).
+ It uses box-muller transformation to simulate the Gaussian distribution
+ from uniformly distributed numbers.
  */
 {
   double x1, x2, w, y1;
