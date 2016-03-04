@@ -6,6 +6,7 @@
 #include "Debugger.h"
 #include <sstream>
 #include <iomanip>
+#include <cstdlib>
 
 // function prototypes *****************************************************
 void calcError(const BayesianClassifier &classifier,
@@ -21,6 +22,14 @@ void prob3();
 
 // main function  *****************************************************
 int main(int argvc, char** argv){
+
+  // make directory
+  const int dir_err = system("mkdir sample_data");
+  if (dir_err == -1){
+      printf("Error creating directory!n");
+      exit(1);
+  }
+
   // generate files
   genFiles();
 
