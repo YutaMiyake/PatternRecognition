@@ -1,8 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-using namespace std;
-
 #include "image.h"
 
 ImageType::ImageType()

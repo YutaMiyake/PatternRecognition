@@ -9,8 +9,6 @@ using namespace std;
 
 void readImageHeader(const char fname[], int& N, int& M, int& Q, bool& type)
 {
- int i, j;
- unsigned char *charImage;
  char header [100], *ptr;
  ifstream ifp;
 
