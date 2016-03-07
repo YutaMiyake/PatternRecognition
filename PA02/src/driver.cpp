@@ -33,6 +33,20 @@ void prob3b();
 
 // main function  *****************************************************
 int main(int argvc, char** argv){
+  // generate files
+  genFiles();
+
+  // problems
+  prob1a();
+  prob1b();
+  prob2a();
+  prob2b();
+  prob3a();
+  prob3b();
+}
+
+// supporting function implementation ***************************************
+void genFiles(){
 
   // make directory
   const int dir_err = system("mkdir sample_data");
@@ -41,20 +55,6 @@ int main(int argvc, char** argv){
       exit(1);
   }
 
-  // generate files
-  genFiles();
-
-  // problems
-  // prob1a();
-  // prob1b();
-  // prob2a();
-  // prob2b();
-     prob3a();
-  // prob3b();
-}
-
-// supporting function implementation ***************************************
-void genFiles(){
   Generator generator;
 
   // default filenames
