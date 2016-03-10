@@ -42,8 +42,8 @@ Matrix matrix_inv(const Matrix& A){
   double det = matrix_det(A);
 
   inv[0][0] = A[1][1]/det;
-  inv[0][1] = A[0][1]/det;
-  inv[1][0] = A[1][0]/det;
+  inv[0][1] = -A[0][1]/det;
+  inv[1][0] = -A[1][0]/det;
   inv[1][1] = A[0][0]/det;
   return inv;
 }
