@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 typedef std::vector< std::vector<double> > Matrix;
 
