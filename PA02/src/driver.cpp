@@ -249,17 +249,17 @@ void prob1a(){
   std::vector<double> mean1 = getSampleMean(points1);
   std::vector<double> mean2 = getSampleMean(points2);
 
-  std::cout << "sample mean1 = ";
+  std::cout << "sample_mean1 = ";
   print_vec(mean1);
-  std::cout << "sample mean2 = ";
+  std::cout << "sample_mean2 = ";
   print_vec(mean2);
 
   Matrix cov1 = getSampleVar(points1, mean1);
   Matrix cov2 = getSampleVar(points2, mean2);
 
-  std::cout << "sample cov1 = ";
+  std::cout << "sample_cov1 = ";
   print_matrix(cov1);
-  std::cout << "sample cov2 = ";
+  std::cout << "sample_cov2 = ";
   print_matrix(cov2);
 
   std::cout << "With estimated params: " << std::endl;
@@ -288,17 +288,17 @@ void prob1b(){
   std::vector<double> mean1 = getSampleMean(points1);
   std::vector<double> mean2 = getSampleMean(points2);
 
-  std::cout << "sample mean1 = ";
+  std::cout << "sample_mean1 = ";
   print_vec(mean1);
-  std::cout << "sample mean2 = ";
+  std::cout << "sample_mean2 = ";
   print_vec(mean2);
 
   Matrix cov1 = getSampleVar(points1, mean1);
   Matrix cov2 = getSampleVar(points2, mean2);
 
-  std::cout << "sample cov1 = ";
+  std::cout << "sample_cov1 = ";
   print_matrix(cov1);
-  std::cout << "sample cov2 = ";
+  std::cout << "sample_cov2 = ";
   print_matrix(cov2);
 
   std::cout << "With estimated params: " << std::endl;
@@ -317,17 +317,17 @@ void prob2a(){
   std::vector<double> mean1 = getSampleMean(points1);
   std::vector<double> mean2 = getSampleMean(points2);
 
-  std::cout << "sample mean1 = ";
+  std::cout << "sample_mean1 = ";
   print_vec(mean1);
-  std::cout << "sample mean2 = ";
+  std::cout << "sample_mean2 = ";
   print_vec(mean2);
 
   Matrix cov1 = getSampleVar(points1, mean1);
   Matrix cov2 = getSampleVar(points2, mean2);
 
-  std::cout << "sample cov1 = ";
+  std::cout << "sample_cov1 = ";
   print_matrix(cov1);
-  std::cout << "sample cov2 = ";
+  std::cout << "sample_cov2 = ";
   print_matrix(cov2);
 
   std::cout << "With estimated params: " << std::endl;
@@ -358,17 +358,17 @@ void prob2b(){
   std::vector<double> mean1 = getSampleMean(points1);
   std::vector<double> mean2 = getSampleMean(points2);
 
-  std::cout << "sample mean1 = ";
+  std::cout << "sample_mean1 = ";
   print_vec(mean1);
-  std::cout << "sample mean2 = ";
+  std::cout << "sample_mean2 = ";
   print_vec(mean2);
 
   Matrix cov1 = getSampleVar(points1, mean1);
   Matrix cov2 = getSampleVar(points2, mean2);
 
-  std::cout << "sample cov1 = ";
+  std::cout << "sample_cov1 = ";
   print_matrix(cov1);
-  std::cout << "sample cov2 = ";
+  std::cout << "sample_cov2 = ";
   print_matrix(cov2);
 
   std::cout << "With estimated params: " << std::endl;
@@ -400,18 +400,18 @@ void prob3a(){
 
   // estimate parameters for skin-color class
   std::vector<double> mean1 = getSampleMean(skin_colors);
-  std::cout << "sample mean1 = ";
+  std::cout << "sample_mean1 = ";
   print_vec(mean1);
   Matrix cov1 = getSampleVar(skin_colors, mean1);
-  std::cout << "sample cov1 = ";
+  std::cout << "sample_cov1 = ";
   print_matrix(cov1);
 
   // set up parameters for non-skin-color class
   std::vector<double> mean2  = getSampleMean(non_skin_colors);
   Matrix cov2 =  getSampleVar(non_skin_colors, mean2);
-  std::cout << "sample mean2 = ";
+  std::cout << "sample_mean2 = ";
   print_vec(mean2);
-  std::cout << "sample cov2 = ";
+  std::cout << "sample_cov2 = ";
   print_matrix(cov2);
 
   // make classifier
@@ -466,18 +466,18 @@ void prob3b(){
 
   // estimate parameters for skin-color class
   std::vector<double> mean1 = getSampleMean(skin_colors);
-  std::cout << "sample mean1 = ";
+  std::cout << "sample_mean1 = ";
   print_vec(mean1);
   Matrix cov1 = getSampleVar(skin_colors, mean1);
-  std::cout << "sample cov1 = ";
+  std::cout << "sample_cov1 = ";
   print_matrix(cov1);
 
   // set up parameters for non-skin-color class
   std::vector<double> mean2  = getSampleMean(non_skin_colors);
   Matrix cov2 =  getSampleVar(non_skin_colors, mean2);
-  std::cout << "sample mean2 = ";
+  std::cout << "sample_mean2 = ";
   print_vec(mean2);
-  std::cout << "sample cov2 = ";
+  std::cout << "sample_cov2 = ";
   print_matrix(cov2);
 
   // make classifier
