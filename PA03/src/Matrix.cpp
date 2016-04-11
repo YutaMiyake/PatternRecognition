@@ -31,7 +31,38 @@ Matrix operator*(const Matrix& A, double a)
   }
   return matrix;
 }
+Matrix operator/(const Matrix& A, double a){
+  int nrows = A.size();
+  int ncols = A[0].size();
 
+  Matrix matrix(nrows, std::vector<double>(ncols));
+  for (int i = 0; i < nrows; ++i) {
+    for (int j = 0; j < ncols; ++j) {
+    matrix[i][j] = A[i][j]/a;
+    }
+  }
+  return matrix;
+}
+Matrix matrix_mul_matrix(const Matrix& A,const Matrix& B)
+/* return AB */
+{
+  assert(!A.empty());
+  assert(!B.empty());
+  assert(A[0].size() == B.size());
+
+  int cols = B[0].size();
+  int rows = A.size();
+
+  Matrix ret(rows, std::vector<double>(cols));
+  Matrix BT = transpose(B);
+
+  for(int row = 0; row < rows; row++){
+    for(int col = 0; col < cols; col++){
+      ret[row][col] = dot_vecs(A[row],BT[col]);
+    }
+  }
+  return ret;
+}
 Matrix matrix_inv(const Matrix& A){
   int nrows = A.size();
   int ncols = A[0].size();
@@ -117,12 +148,17 @@ double** toPtr(const Matrix& A){
   return ret;
 }
 
-std::vector<double> dot_mat_vec(Matrix A, std::vector<double> v){
+std::vector<double> dot_mat_vec(Matrix A, std::vector<double> v)
+/* return Av */
+{
   assert(A[0].size() == v.size());
 
-  std::vector<double> dot(A.size());
-  for(int row = 0; row < 2; row++){
-    for(int col = 0; col < 2; col++){
+  int rows = A.size();
+  int cols = A[0].size();
+  std::vector<double> dot(rows);
+
+  for(int row = 0; row < rows; row++){
+    for(int col = 0; col < cols; col++){
       dot[row] += A[row][col]*v[col];
     }
   }
@@ -258,7 +294,6 @@ void loadTxtMatrix(Matrix &points, std::string filename){
       points[row][col] = val;
     }
   }
-
   fin.close();
 }
 void loadTxtVector(std::vector<double> &vec, std::string filename){

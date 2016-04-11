@@ -7,11 +7,16 @@
 #include "ML.h"
 #include "Matrix.h"
 
+void calcEigens();
+void calcEigens_fast();
 void expAI();
 void expAII();
 void expAV1();
 void expAV2();
+void expB();
 Matrix readData(bool train);
+int isMatched_exB(std::vector<std::string> train_ids,
+  std::vector<double> queryImage, std::string query_image_id, int numTopVec, int dim, std::string trainCoefFileName);
 bool isMatched(std::vector<std::string> train_ids,
   std::vector<double> queryImage, std::string query_image_id, int numTopVec, int dim, std::string trainCoefFileName);
 std::vector<std::string> readIds(std::string filename);
@@ -24,10 +29,13 @@ const int HEIGHT = 60;
 const int DIMENSION = WIDTH*HEIGHT;
 
 int main(){
-  // expAI();
-  // expAII();
+  calcEigens();
+  expAI();
+  expAII();
   expAV1();
   expAV2();
+  calcEigens_fast();
+  expB();
   return 0;
 }
 
@@ -85,6 +93,85 @@ Matrix readData(bool train)
   return ret;
 }
 
+bool isMatched(std::vector<std::string> train_ids,
+  std::vector<double> queryImage, std::string query_image_id, int numTopVec, int dim, std::string trainCoefFileName){
+  // assume each distance is discrete
+  Matrix trainCoeffs(TRAIN_FILE_SIZE,std::vector<double>(dim));
+  loadTxtMatrix(trainCoeffs, trainCoefFileName);
+
+  std::map<double,int> candidates;
+  double dist;
+
+  for(int train = 0; train < TRAIN_FILE_SIZE; train++){
+    dist = squaredEuclideanNorm(trainCoeffs[train] - queryImage);
+    candidates[dist] = train;
+  }
+  int ctr = 0;
+  for (std::map<double,int>::iterator iter = candidates.begin();
+    iter!=candidates.end() && ctr < numTopVec; ctr++, ++iter){
+    if(train_ids[iter->second] == query_image_id){
+      // std::cout << iter->second << std::endl;
+      // std::cout << query_image_id << std::endl;
+      return true;
+    }
+    // std::cout << iter->second << std::endl;
+  }
+  return false;
+}
+
+int isMatched_exB(std::vector<std::string> train_ids,
+  std::vector<double> queryImage, std::string query_image_id, int numTopVec, int dim, std::string trainCoefFileName){
+
+  // assume each distance is discrete
+  Matrix trainCoeffs(TRAIN_FILE_SIZE-50,std::vector<double>(dim));
+  loadTxtMatrix(trainCoeffs, trainCoefFileName);
+
+  std::map<double,int> candidates;
+  double dist;
+
+  for(int train = 0; train < TRAIN_FILE_SIZE-50; train++){
+    dist = squaredEuclideanNorm(trainCoeffs[train] - queryImage);
+    candidates[dist] = train;
+  }
+
+  int thresh = 820;
+  int ctr = 0;
+  for (std::map<double,int>::iterator iter = candidates.begin();
+    iter!=candidates.end() && ctr < numTopVec; ctr++, ++iter){
+    // intruders
+    if(stoi(query_image_id) >= 0 && stoi(query_image_id) <= 29){
+          if(sqrt(iter->first) < thresh){
+            return 1; // FP
+          }
+        }
+    else if(train_ids[iter->second] == query_image_id){
+      // std::cout << iter->second << std::endl;
+      // std::cout << query_image_id << std::endl;
+
+      if(sqrt(iter->first) < thresh){
+        return 0; // TP
+      }
+    }
+    else{
+      // std::cout << iter->second << std::endl;
+    }
+  }
+  return 2;
+}
+
+std::vector<std::string> readIds(std::string filename){
+  std::fstream fin;
+  fin.open(filename);
+  std::vector<std::string> names;
+  std::string name;
+  while(fin.good()){
+    fin >> name;
+    names.push_back(name.substr(0,5));
+  }
+  fin.close();
+  return names;
+}
+
 void writePGM(std::string filename, std::vector<double> img) {
     assert(img.size() == DIMENSION);
 
@@ -105,8 +192,7 @@ void writePGM(std::string filename, std::vector<double> img) {
     fout.close();
 }
 
-void expAI(){
-  /*
+void calcEigens(){
   Matrix dataMatrix = readData(true);
 
   // step 1 - calc mean
@@ -114,10 +200,10 @@ void expAI(){
   writePGM("Faces/avgFace.pgm", mean);
 
   // step 2 - calc sample covariance
-  // Matrix cov = getSampleVar(dataMatrix, mean);
-  // writeMatrix(cov, "Faces/cov.txt");
-  Matrix cov(DIMENSION,std::vector<double>(DIMENSION));
-  loadTxtMatrix(cov, "Faces/cov_matrix.txt");
+  Matrix cov = getSampleVar(dataMatrix, mean);
+  writeMatrix(cov, "Faces/cov.txt");
+  // Matrix cov(DIMENSION,std::vector<double>(DIMENSION));
+  // loadTxtMatrix(cov, "Faces/cov_matrix.txt");
 
   // step 3 - calc eigenvectors and eigenvalues
   double** eigenvectors = NULL;
@@ -152,12 +238,88 @@ void expAI(){
   loadTxtMatrix(eigens, "Faces/eigenvecs.txt");
   eigens = transpose(eigens);
 
-  for(int data = 0; data < TRAIN_FILE_SIZE + 1; data++){
+  for(int data = 0; data < TRAIN_FILE_SIZE; data++){
     eigens[data] = normalize(eigens[data]);
   }
   writeMatrix(eigens,"Faces/normalized.txt");
-  */
+}
+void calcEigens_fast()
+/*
+ used for experiment B only
+ */
+{
+  Matrix dataMatrix = subMatrix(readData(true),50,0,TRAIN_FILE_SIZE,DIMENSION);
+  int file_size = TRAIN_FILE_SIZE - 50;
 
+  // step 1 - calc mean
+  std::vector<double> mean = getSampleMean(dataMatrix);
+  writePGM("Faces/avgFace_exB.pgm", mean);
+
+
+  // step 2 - subtract mean
+  Matrix centeredDataMatrix = matrix_vec_diff(dataMatrix, mean);
+
+  // step 3 - calc A^TA (actually AA^T in implementation)
+  Matrix ATA(file_size,std::vector<double>(file_size));
+  ATA = matrix_mul_matrix(centeredDataMatrix,transpose(centeredDataMatrix))/file_size;
+  writeMatrix(ATA,"Faces/ATA_exB.txt");
+
+  // step 4 - calc eigenvectors and eigenvalues
+  // Matrix ATA(file_size,std::vector<double>(file_size));
+  // loadTxtMatrix(ATA,"Faces/ATA_exB.txt");
+
+  double** eigenvectors = NULL;
+  double* eigenvalues = NULL;
+  Matrix temp = addZeroLoc(ATA);
+  double** pcov = toPtr(temp);
+
+  // allocate
+  eigenvectors = new double*[file_size+1];
+  eigenvalues = new double[file_size+1];
+  for(int row = 0; row < file_size+1; row++){
+    eigenvectors[row] = new double[file_size+1];
+  }
+
+  jacobi(pcov, file_size, eigenvalues, eigenvectors);
+
+  Matrix evecs = subMatrix(toMatrix(eigenvectors,file_size+1,file_size+1),1,1,file_size+1,file_size+1);
+  std::vector<double> evals = subVector(toVector(eigenvalues,file_size+1),1,file_size+1);
+
+  // Matrix evecs(file_size,std::vector<double>(file_size));
+  evecs = transpose(evecs);
+
+  // transform eigenvectors to ones for AAT
+  Matrix transposedDataMatrix = transpose(centeredDataMatrix);
+
+  Matrix evecs_new(file_size,std::vector<double>(DIMENSION));
+  for(int vec = 0; vec < file_size; vec++){
+    evecs_new[vec] = dot_mat_vec(transposedDataMatrix,evecs[vec]);
+  }
+
+  evecs_new = evecs_new*(-1); // TODO: it works but why need to (*-1) here ?
+
+  // write eigenvectors and eigenvalus to files
+  writeMatrix(evecs_new,"Faces/eigenvecs_exB.txt");
+  writeVector(evals,"Faces/eigenvals_exB.txt");
+
+  // deallocate
+  for(int row = 0; row < file_size+1; row++){
+    delete[] eigenvectors[row];
+  }
+  delete[] eigenvalues;
+  delete[] eigenvectors;
+
+  // step 6 - normalize eigenvectors
+  Matrix eigens(file_size,std::vector<double>(DIMENSION));
+  loadTxtMatrix(eigens, "Faces/eigenvecs_exB.txt");
+
+  for(int data = 0; data < file_size; data++){
+    eigens[data] = normalize(eigens[data]);
+  }
+  writeMatrix(eigens,"Faces/normalized_exB.txt");
+}
+
+void expAI(){
   Matrix normalized(DIMENSION,std::vector<double>(DIMENSION));
   loadTxtMatrix(normalized, "Faces/normalized.txt");
 
@@ -205,7 +367,7 @@ void expAII(){
   int dim = idx + 1;
 
   // calc eigen-coefficients
-  /*
+
   Matrix eigens(DIMENSION,std::vector<double>(DIMENSION));
   loadTxtMatrix(eigens, "Faces/normalized.txt");
 
@@ -229,7 +391,7 @@ void expAII(){
     }
   }
   writeMatrix(queryCoeffs,"Faces/queryCoeffs.txt");
-  */
+
 
   // read filenames
   std::vector<std::string> faH_ids(TRAIN_FILE_SIZE);
@@ -238,8 +400,8 @@ void expAII(){
   fbH_ids = readIds("Faces/fb_H_fileNames.txt");
 
   // testing
-  Matrix queryCoeffs(QUERY_FILE_SIZE,std::vector<double>(dim));
-  loadTxtMatrix(queryCoeffs, "Faces/queryCoeffs.txt");
+  // Matrix queryCoeffs(QUERY_FILE_SIZE,std::vector<double>(dim));
+  // loadTxtMatrix(queryCoeffs, "Faces/queryCoeffs.txt");
 
   // Loop from N = 1 to 50
   for(int numTopVec = 1; numTopVec <= 50; numTopVec++){
@@ -249,7 +411,10 @@ void expAII(){
       matched = isMatched(faH_ids, queryCoeffs[query], fbH_ids[query],numTopVec, dim, "Faces/trainCoeffs.txt");
       if(matched){
         count++;
-        // std::cout << "Query " << query << " is correctly matched" << std::endl;
+        std::cout << "Query " << query << " is correctly matched" << std::endl;
+      }
+      else{
+        std::cout << "Query " << query << " is incorrectly matched" << std::endl;
       }
     }
      std::cout << "N = " << numTopVec << " # of correctly matched query images = " << count
@@ -279,7 +444,7 @@ void expAV1(){
   int dim = idx + 1;
 
   // calc eigen-coefficients
-  /*
+
   Matrix eigens(DIMENSION,std::vector<double>(DIMENSION));
   loadTxtMatrix(eigens, "Faces/normalized.txt");
 
@@ -303,7 +468,7 @@ void expAV1(){
     }
   }
   writeMatrix(queryCoeffs,"Faces/queryCoeffs_90.txt");
-  */
+
 
   // read filenames
   std::vector<std::string> faH_ids(TRAIN_FILE_SIZE);
@@ -312,8 +477,8 @@ void expAV1(){
   fbH_ids = readIds("Faces/fb_H_fileNames.txt");
 
   // testing
-  Matrix queryCoeffs(QUERY_FILE_SIZE,std::vector<double>(dim));
-  loadTxtMatrix(queryCoeffs, "Faces/queryCoeffs_90.txt");
+  // Matrix queryCoeffs(QUERY_FILE_SIZE,std::vector<double>(dim));
+  // loadTxtMatrix(queryCoeffs, "Faces/queryCoeffs_90.txt");
 
   // Loop from N = 1 to 50
   for(int numTopVec = 1; numTopVec <= 50; numTopVec++){
@@ -354,7 +519,7 @@ void expAV2(){
   int dim = idx + 1;
 
   // calc eigen-coefficients
-  /*
+
   Matrix eigens(DIMENSION,std::vector<double>(DIMENSION));
   loadTxtMatrix(eigens, "Faces/normalized.txt");
 
@@ -378,7 +543,7 @@ void expAV2(){
     }
   }
   writeMatrix(queryCoeffs,"Faces/queryCoeffs_95.txt");
-  */
+
 
   // read filenames
   std::vector<std::string> faH_ids(TRAIN_FILE_SIZE);
@@ -387,8 +552,8 @@ void expAV2(){
   fbH_ids = readIds("Faces/fb_H_fileNames.txt");
 
   // testing
-  Matrix queryCoeffs(QUERY_FILE_SIZE,std::vector<double>(dim));
-  loadTxtMatrix(queryCoeffs, "Faces/queryCoeffs_95.txt");
+  // Matrix queryCoeffs(QUERY_FILE_SIZE,std::vector<double>(dim));
+  // loadTxtMatrix(queryCoeffs, "Faces/queryCoeffs_95.txt");
 
   // Loop from N = 1 to 50
   for(int numTopVec = 1; numTopVec <= 50; numTopVec++){
@@ -407,45 +572,84 @@ void expAV2(){
 
 }
 
-bool isMatched(std::vector<std::string> train_ids,
-  std::vector<double> queryImage, std::string query_image_id, int numTopVec, int dim, std::string trainCoefFileName){
-  // assume each distance is discrete
-  Matrix trainCoeffs(TRAIN_FILE_SIZE,std::vector<double>(dim));
-  loadTxtMatrix(trainCoeffs, trainCoefFileName);
+void expB(){
+  Matrix dataMatrix = subMatrix(readData(true),50,0,TRAIN_FILE_SIZE,DIMENSION);
+  int file_size = TRAIN_FILE_SIZE - 50;
 
-  std::map<double,int> candidates;
-  double dist;
+  std::vector<double> eigenvals(file_size);
+  loadTxtVector(eigenvals, "Faces/eigenvals_exB.txt");
 
-  for(int train = 0; train < TRAIN_FILE_SIZE; train++){
-    dist = squaredEuclideanNorm(trainCoeffs[train] - queryImage);
-    candidates[dist] = train;
+  // find k, preserving 95% of the info
+  double info = 0.0;
+  double sum1 = 0.0;
+  double idx = 0;
+
+  for(int row = 0; row < file_size; row++){
+    sum1 += eigenvals[row];
   }
-  int ctr = 0;
-  for (std::map<double,int>::iterator iter = candidates.begin();
-    iter!=candidates.end() && ctr < numTopVec; ctr++, ++iter){
-    if(train_ids[iter->second] == query_image_id){
-      // std::cout << query_image_id << std::endl;
-      return true;
+
+  while(info/sum1 < 0.95){
+    info += eigenvals[idx];
+    idx++;
+  }
+  int dim = idx + 1;
+
+
+  // calc eigen-coefficients
+  Matrix eigens(file_size,std::vector<double>(DIMENSION));
+  loadTxtMatrix(eigens, "Faces/normalized_exB.txt");
+  eigens = eigens*(-1);
+
+  std::vector<double> mean = getSampleMean(dataMatrix);
+
+  Matrix trainCoeffs(file_size,std::vector<double>(dim));
+  for(int data = 0; data < file_size; data++){
+    dataMatrix[data] = dataMatrix[data] - mean; // subtract the avg face
+    for(int nth = 0; nth < dim; nth++){
+      trainCoeffs[data][nth] = dot_vecs(dataMatrix[data],eigens[nth]);
     }
   }
-  return false;
-}
+  writeMatrix(trainCoeffs,"Faces/trainCoeffs_exB_95.txt");
 
-std::vector<std::string> readIds(std::string filename){
-  std::fstream fin;
-  fin.open(filename);
-  std::vector<std::string> names;
-  std::string name;
-  while(fin.good()){
-    fin >> name;
-    names.push_back(name.substr(0,5));
+  Matrix queryCoeffs(QUERY_FILE_SIZE,std::vector<double>(dim));
+  Matrix queryDataMatrix = readData(false);
+  for(int data = 0; data < QUERY_FILE_SIZE; data++){
+    queryDataMatrix[data] = queryDataMatrix[data] - mean; // subtract the avg face
+    for(int nth = 0; nth < dim; nth++){
+      queryCoeffs[data][nth] = dot_vecs(queryDataMatrix[data],eigens[nth]);
+    }
   }
-  fin.close();
-  return names;
+  writeMatrix(queryCoeffs,"Faces/queryCoeffs_exB_95.txt");
+
+
+  // testing
+  // Matrix queryCoeffs(QUERY_FILE_SIZE,std::vector<double>(dim));
+  // loadTxtMatrix(queryCoeffs, "Faces/queryCoeffs_exB_95.txt");
+
+  // read filenames
+  std::vector<std::string> faH2_ids(TRAIN_FILE_SIZE-50);
+  faH2_ids = readIds("Faces/fa_H2_fileNames.txt");
+  std::vector<std::string> fbH_ids(QUERY_FILE_SIZE);
+  fbH_ids = readIds("Faces/fb_H_fileNames.txt");
+
+  int tp = 0;
+  int fp = 0;
+  int status;
+  for(int query = 0; query < QUERY_FILE_SIZE; query++){
+    status = isMatched_exB(faH2_ids, queryCoeffs[query], fbH_ids[query],1, dim, "Faces/trainCoeffs_exB_95.txt");
+    if(status == 0){
+      tp++;
+      std::cout << "Query " << query << " is correctly matched" << std::endl;
+    }
+    else if(status == 1){
+      fp++;
+    }
+  }
+  std::cout
+  <<" TP = " << tp
+  << " TP/POS = " << tp/(double)(QUERY_FILE_SIZE-50)
+  <<" FP = " << fp
+  << " FP/NEG = " << fp/(double)50
+  << std::endl;
 }
-
-void expAV(){
-
-}
-
 

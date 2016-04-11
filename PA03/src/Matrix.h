@@ -12,6 +12,8 @@ typedef std::vector< std::vector<double> > Matrix;
 
 Matrix operator+(const Matrix& A, const Matrix& B);
 Matrix operator*(const Matrix& A, double a);
+Matrix operator/(const Matrix& A, double a);
+Matrix matrix_mul_matrix(const Matrix& A,const Matrix& B);
 Matrix matrix_inv(const Matrix& A);
 Matrix matrix_vec_diff(const Matrix& A, std::vector<double> v);
 Matrix toMatrix(double** A, int rows, int cols);
